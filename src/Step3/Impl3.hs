@@ -4,6 +4,8 @@
 
 module Step3.Impl3 ( mkOpsWrapper 
                    , runPipeline
+                   , OperationsWrapper (..)
+                   , OpsError (..)
                    ) where
 
 import           Protolude hiding (catch)
@@ -54,17 +56,14 @@ mkOpsWrapper o =
 runPipeline :: (Monad m) => OperationsWrapper m -> Text -> [I2.Job m] -> m (Either OpsError Text)
 runPipeline ops init jobs = E.runExceptT $ do
   opWrite ops init
-  traverse_ runJob jobs
-  r <- opRead ops
-
+  r <- foldlM runJob init jobs
   opLog ops ""
   opLog ops $ "final result = " <> r
   pure r
 
   where
-    runJob (I2.Job name fn) = do
+    runJob prev (I2.Job name fn) = do
       opLog ops $ "running job: " <> name
-      prev <- opRead ops
       r <- opRun ops fn prev -- don't just lift, use opRun
       opLog ops $ "  = " <> r
       opLog ops "  ----"

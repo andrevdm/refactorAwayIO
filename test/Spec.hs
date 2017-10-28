@@ -1,7 +1,1 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-
-import           Protolude
-
-main :: IO ()
-main = putText "Test suite not yet implemented"
+{-# OPTIONS_GHC -F -pgmF hspec-discover #-}
