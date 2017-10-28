@@ -28,6 +28,7 @@ mkFileOps :: FilePath -> IO (I.Operations IO) -- ^ Operations specialised to IO
 mkFileOps p =
   pure I.Operations { I.opRead = readFileOp p
                     , I.opWrite = writeFileOp p
+                    , I.opLog = putText
                     }
 --------------------------------------------------------
 
@@ -52,5 +53,6 @@ mkMemOps = do
 
   pure I.Operations { I.opRead = readMemOp mem
                     , I.opWrite = writeMemOp mem
+                    , I.opLog = putText
                     }
 --------------------------------------------------------

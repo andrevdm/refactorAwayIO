@@ -3,9 +3,11 @@
 
 module Main where
 
-import           Protolude hiding (catch)
+import           Protolude hiding (catch, throwIO)
+import qualified Prelude -- for the show instance
+import qualified Data.Text as Txt
 import qualified System.Console.ANSI as Ansi
-import           Control.Exception.Safe (catch)
+import           Control.Exception.Safe (catch, throwIO)
 
 import qualified Step1.Storage1 as S1
 import qualified Step1.Impl1 as I1
@@ -13,74 +15,102 @@ import qualified Step2.Storage2 as S2
 import qualified Step2.Impl2 as I2
 import qualified Step3.Impl3 as I3
 
-
-step1 :: IO ()
-step1 = do
-  runDemo "1" $ do
-    opsMem <- S1.mkMemOps
-    resultMem <- I1.runImpl opsMem
-    putText $ "in memory result:\n   " <> resultMem
-
-  runDemo "2" $ do
-    opsFile <- S1.mkFileOps "data.txt"
-    resultFile <- I1.runImpl opsFile
-    putText $ "file result:\n   " <> resultFile
-  
-  runDemo "3" $ do
-    opsFileErr <- S1.mkFileOps "\0"
-    resultFileErr <- I1.runImpl opsFileErr
-    putText $ "file (err) result:\n   " <> resultFileErr
-
-
-step2 :: IO ()
-step2 = do
-  runDemo "4" $ do
-    opsMem <- S2.mkMemOps
-    resultMem <- I2.runImpl opsMem
-    putText $ "in memory result:\n   " <> resultMem
-
-  runDemo "5" $ do
-    opsFile <- S2.mkFileOps "data.txt"
-    resultFile <- I2.runImpl opsFile
-    putText $ "file result:\n   " <> resultFile
-  
-  runDemo "6" $ do
-    opsFileErr <- S2.mkFileOps "\0"
-    resultFileErr <- I2.runImpl opsFileErr
-    putText $ "file (err) result:\n   " <> resultFileErr
-
-
-step3 :: IO ()
-step3 = do
-  runDemo "7" $ do
-    opsMem <- S2.mkMemOps
-    resultMem <- I3.runImplSafe $ I3.mkOpsWrapper opsMem
-    case resultMem of
-      Right r -> putText $ "in memory result:\n   " <> r
-      Left e -> putText $ "in memory error:\n   " <> show e
-
-  runDemo "8" $ do
-    opsFile <- S2.mkFileOps "data.txt"
-    resultFile <- I3.runImplSafe $ I3.mkOpsWrapper opsFile
-    case resultFile of
-      Right r -> putText $ "file result:\n   " <> r
-      Left e -> putText $ "file result:\n   " <> show e
-  
-  runDemo "9" $ do
-    opsFileErr <- S2.mkFileOps "\0"
-    resultFileErr <- I3.runImplSafe $ I3.mkOpsWrapper opsFileErr
-    case resultFileErr of
-      Right r -> putText $ "file (err) result:\n   " <> r
-      Left e -> putText $ "file (err) error:\n   " <> show e
-
-
 main :: IO ()
 main = do
-  runStep "1" step1 `catch` handler
-  runStep "2" step2 `catch` handler
-  runStep "3" step3
+  ------------------------------
+  -- demo 1
+  -----------------------------
+  header "Demo1: in memory"
+  opsMem1 <- S1.mkMemOps
+  demo1 opsMem1 `catch` handler
 
-  putText "done"
+  header "Demo1: use file"
+  opsFile1 <- S1.mkFileOps "data.txt"
+  demo1 opsFile1 `catch` handler
+  ------------------------------
+
+  
+  ------------------------------
+  -- demo 2
+  -----------------------------
+  header "Demo2: in memory"
+  opsMem2 <- S2.mkMemOps
+  demo2 opsMem2 `catch` handler
+
+  header "Demo2: use file"
+  opsFile2 <- S2.mkFileOps "data.txt"
+  demo2 opsFile2 `catch` handler
+  ------------------------------
+
+  
+  ------------------------------
+  -- demo 3
+  -----------------------------
+  header "Demo3: in memory"
+  opsMem3 <- S2.mkMemOps
+  demo3 opsMem3 --no catch
+
+  header "Demo3: use file"
+  opsFile3 <- S2.mkFileOps "data.txt"
+  demo3 opsFile3 -- no catch
+  ------------------------------
+
+
+demo1 :: I1.Operations -> IO ()
+demo1 ops = do
+  let jobs = [ I1.Job "j1" job1
+             , I1.Job "j2" job2
+             , I1.Job "j3" job3
+             ]
+  
+  r <- I1.runPipeline ops "0" jobs
+  putText r
+
+
+demo2 :: I2.Operations IO -> IO ()
+demo2 ops = do
+  let jobs = [ I2.Job "j1" job1
+             , I2.Job "j2" job2
+             , I2.Job "j3" job3
+             ]
+  
+  r <- I2.runPipeline ops "0" jobs
+  putText r
+
+
+demo3 :: I2.Operations IO -> IO ()
+demo3 ops = do
+  let jobs = [ I2.Job "j1" job1
+             , I2.Job "j2" job2
+             , I2.Job "j3" job3
+             ]
+  
+  r <- I3.runPipeline (I3.mkOpsWrapper ops) "0" jobs
+  case r of
+    Right x -> putText $ "Success: " <> x
+    Left e -> putText $ "Exception: " <> show e
+  
+
+
+---------------------------------
+-- User defined jobs
+---------------------------------
+job1 :: Text -> IO Text
+job1 v = do
+  putText "in job1"
+  pure $ "1:" <> v
+
+job2 :: Text -> IO Text
+job2 v = do
+  putText "in job2"
+  void . throwIO $ DemoException "oops"
+  pure $ "2:" <> v
+
+job3 :: Text -> IO Text
+job3 v = do
+  putText "in job3"
+  pure $ "3:" <> v
+---------------------------------
 
 
 handler :: SomeException -> IO ()
@@ -89,27 +119,20 @@ handler e = do
   putText $ "Exception: " <> show e
   Ansi.setSGR [Ansi.Reset]
 
-
-runDemo :: Text -> IO () -> IO ()
-runDemo name demo = do
+  
+header :: Text -> IO ()
+header h = do
+  putText ""
+  putText ""
   Ansi.setSGR [Ansi.SetColor Ansi.Foreground Ansi.Dull Ansi.Cyan]
-  putText " ---------"
-  putText $ "  DEMO " <> name
-  putText " ---------"
-  Ansi.setSGR [Ansi.Reset]
-  demo
-  Ansi.setSGR [Ansi.SetColor Ansi.Foreground Ansi.Dull Ansi.Cyan]
-  putText " --------\n"
+  putText "---------"
+  putText $ " " <> h
+  putText "---------"
 
 
-runStep :: Text -> IO () -> IO ()
-runStep name step = do
-  Ansi.setSGR [Ansi.SetColor Ansi.Foreground Ansi.Dull Ansi.Yellow]
-  putText "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-  putText $ " STEP " <> name
-  putText "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-  Ansi.setSGR [Ansi.Reset]
-  step
-  Ansi.setSGR [Ansi.SetColor Ansi.Foreground Ansi.Dull Ansi.Yellow]
-  putText "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n\n"
-  Ansi.setSGR [Ansi.Reset]
+newtype DemoException = DemoException Text
+
+instance Show DemoException where
+  show (DemoException s) = Txt.unpack s
+  
+instance Exception DemoException
