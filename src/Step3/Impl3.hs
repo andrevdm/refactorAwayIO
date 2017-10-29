@@ -56,15 +56,21 @@ mkOpsWrapper o =
 runPipeline :: (Monad m) => OperationsWrapper m -> Text -> [I2.Job m] -> m (Either OpsError Text)
 runPipeline ops init jobs = E.runExceptT $ do
   opWrite ops init
-  r <- foldlM runJob init jobs
-  opLog ops ""
-  opLog ops $ "final result = " <> r
-  pure r
+  id <- foldlM runJob 0 jobs
+
+  opLog ops $ "\nfinal job id = " <> show id
+  opRead ops
 
   where
-    runJob prev (I2.Job name fn) = do
+    runJob (id :: Int) (I2.Job name fn) = do
       opLog ops $ "running job: " <> name
+
+      prev <- opRead ops
       r <- opRun ops fn prev -- don't just lift, use opRun
+      opWrite ops r
+  
       opLog ops $ "  = " <> r
       opLog ops "  ----"
-      pure r
+
+      pure $ id + 1
+

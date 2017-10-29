@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Step1.Impl1 ( Operations (..)
                    , Job (..)
@@ -21,16 +22,20 @@ data Job = Job { jobName :: Text
 runPipeline :: Operations -> Text -> [Job] -> IO Text
 runPipeline ops init jobs = do
   opWrite ops init
-  r <- foldlM runJob init jobs
+  id <- foldlM runJob 0 jobs
 
-  putText ""
-  putText $ "final result = " <> r
-  pure r
+  putText $ "\nfinal job id = " <> show id
+  opRead ops
 
   where
-    runJob prev (Job name fn) = do
+    runJob (id :: Int) (Job name fn) = do
       putText $ "running job: " <> name
+
+      prev <- opRead ops
       r <- fn prev
+      opWrite ops r
+      
       putText $ "  = " <> r
       putText "  ----"
-      pure r
+
+      pure $ id + 1

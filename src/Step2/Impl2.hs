@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Step2.Impl2 ( Operations (..)
                    , Job (..)
@@ -22,16 +23,20 @@ data Job m = Job { jobName :: Text
 runPipeline :: (Monad m) => Operations m -> Text -> [Job m] -> m Text
 runPipeline ops init jobs = do
   opWrite ops init
-  r <- foldlM runJob init jobs
+  id <- foldlM runJob 0 jobs
 
-  opLog ops ""
-  opLog ops $ "final result = " <> r
-  pure r
+  opLog ops $ "\nfinal job id = " <> show id
+  opRead ops
 
   where
-    runJob prev (Job name fn) = do
+    runJob (id :: Int) (Job name fn) = do
       opLog ops $ "running job: " <> name
+
+      prev <- opRead ops
       r <- fn prev
+      opWrite ops r
+      
       opLog ops $ "  = " <> r
       opLog ops "  ----"
-      pure r
+
+      pure $ id + 1
