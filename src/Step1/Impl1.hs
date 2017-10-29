@@ -21,17 +21,15 @@ data Job = Job { jobName :: Text
 runPipeline :: Operations -> Text -> [Job] -> IO Text
 runPipeline ops init jobs = do
   opWrite ops init
-  traverse_ runJob jobs
-  r <- opRead ops
+  r <- foldlM runJob init jobs
 
   putText ""
   putText $ "final result = " <> r
   pure r
 
   where
-    runJob (Job name fn) = do
+    runJob prev (Job name fn) = do
       putText $ "running job: " <> name
-      prev <- opRead ops
       r <- fn prev
       putText $ "  = " <> r
       putText "  ----"
