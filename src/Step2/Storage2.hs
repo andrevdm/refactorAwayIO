@@ -24,12 +24,12 @@ writeFileOp :: FilePath -> Text -> IO ()
 writeFileOp = Txt.writeFile
 
 
-mkFileOps :: FilePath -> IO (I.Operations IO) -- ^ Operations specialised to IO
+mkFileOps :: FilePath -> I.Operations IO -- ^ Operations specialised to IO
 mkFileOps p =
-  pure I.Operations { I.opRead = readFileOp p
-                    , I.opWrite = writeFileOp p
-                    , I.opLog = putText
-                    }
+  I.Operations { I.opRead = readFileOp p
+               , I.opWrite = writeFileOp p
+               , I.opLog = putText
+               }
 --------------------------------------------------------
 
 

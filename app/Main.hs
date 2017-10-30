@@ -26,7 +26,7 @@ main = do
   demo1 opsMem1 `catch` handler
 
   header "Demo1: use file"
-  opsFile1 <- S1.mkFileOps "data.txt"
+  let opsFile1 = S1.mkFileOps "data.txt"
   demo1 opsFile1 `catch` handler
   ------------------------------
 
@@ -39,7 +39,7 @@ main = do
   demo2 opsMem2 `catch` handler
 
   header "Demo2: use file"
-  opsFile2 <- S2.mkFileOps "data.txt"
+  let opsFile2 = S2.mkFileOps "data.txt"
   demo2 opsFile2 `catch` handler
   ------------------------------
 
@@ -52,7 +52,7 @@ main = do
   demo3 opsMem3 --no catch
 
   header "Demo3: use file"
-  opsFile3 <- S2.mkFileOps "data.txt"
+  let opsFile3 = S2.mkFileOps "data.txt"
   demo3 opsFile3 -- no catch
   ------------------------------
 
