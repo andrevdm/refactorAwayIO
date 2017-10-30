@@ -43,6 +43,7 @@ executable refactorAwayIO-exe
                      , safe-exceptions
                      , ansi-terminal
                      , mtl
+                     , async
   default-language:    Haskell2010
 
 test-suite refactorAwayIO-test

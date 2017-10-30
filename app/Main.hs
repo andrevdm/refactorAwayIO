@@ -7,6 +7,7 @@ import           Protolude hiding (catch, throwIO)
 import qualified Prelude -- for the show instance
 import qualified Data.Text as Txt
 import qualified System.Console.ANSI as Ansi
+import qualified Control.Concurrent.Async as A
 import           Control.Exception.Safe (catch, throwIO)
 
 import qualified Step1.Storage1 as S1
@@ -56,6 +57,13 @@ main = do
   demo3 opsFile3 -- no catch
   ------------------------------
 
+  ------------------------------
+  -- demo of using async to catch
+  -----------------------------
+  putText ""
+  demoAsyncCatch
+  -----------------------------
+
 
 demo1 :: I1.Operations -> IO ()
 demo1 ops = do
@@ -89,8 +97,7 @@ demo3 ops = do
   r <- I3.runPipeline (I3.mkOpsWrapper ops) "0" jobs
   case r of
     Right x -> putText $ "Success: " <> x
-    Left e -> putText $ "Exception: " <> show e
-  
+    Left e -> putText $ "Exception: " <> show e 
 
 
 ---------------------------------
@@ -137,3 +144,22 @@ instance Show DemoException where
   show (DemoException s) = Txt.unpack s
   
 instance Exception DemoException
+
+
+
+---------------------------------
+-- Demo of using async to catch
+---------------------------------
+demoAsyncCatch :: IO ()
+demoAsyncCatch = do
+  r <- A.async jobBad >>= A.waitCatch
+
+  case r of
+    Right _ -> putText "demo async - Right"
+    Left e -> putText $ "demo async - Left: " <> show e
+
+  where
+    jobBad = do
+      putText "in jobBad"
+      void . throwIO $ DemoException "oops"
+--------------------------------
